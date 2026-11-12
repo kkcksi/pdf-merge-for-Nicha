@@ -3,45 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF結合アプリ (for Nicha)</title>
-    <!-- Tailwind CSS CDN -->
+    <title>PDFツール (for Nicha)</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- PDF-Lib CDN -->
+    <!-- PDF-Lib & PDF.js -->
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-    <!-- PDF.js CDN (サムネイル生成・高画質フォールバック用) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        body {
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-        }
-        .drag-over {
-            border-color: #4f46e5 !important;
-            background-color: #eef2ff !important;
-        }
-        .ghost-card {
-            opacity: 0.4;
-            transform: scale(0.98);
-        }
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        .drag-over { border-color: #4f46e5 !important; background-color: #eef2ff !important; }
+        .ghost-card { opacity: 0.4; transform: scale(0.98); }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
 <body class="h-full flex flex-col text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
@@ -55,7 +36,7 @@
                 </div>
                 <div>
                     <h1 class="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
-                        にちゃ専用のPDF結合アプリ
+                        にちゃ専用のPDFツール
                     </h1>
                     <p class="text-xs text-slate-500 hidden sm:block">せっかく作ったからたくさん使ってねー</p>
                 </div>
@@ -71,67 +52,63 @@
     <!-- メインコンテンツ -->
     <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col space-y-6">
 
-        <!-- ドロップゾーン -->
-        <section>
-            <div id="drop-zone" class="border-2 border-dashed border-slate-300 hover:border-indigo-400 bg-white hover:bg-slate-50/50 rounded-2xl p-8 text-center transition-all duration-200 cursor-pointer shadow-sm group relative">
-                <input type="file" id="file-input" accept="application/pdf" multiple class="hidden">
-                <div class="max-w-md mx-auto flex flex-col items-center space-y-3 pointer-events-none">
-                    <div class="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                        <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
-                    </div>
-                    <div>
-                        <p class="text-base font-semibold text-slate-700">
-                            PDFファイルをここにドラッグ＆ドロップしてね
-                        </p>
-                        <p class="text-xs text-slate-500 mt-1">
-                            それか画面をクリックして <span class="text-indigo-600 font-medium underline">ファイルを選択</span>してね
-                        </p>
-                    </div>
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
-                        PDFファイルしか対応してないから、WordとかExcelは選択しないでね
-                    </span>
-                </div>
+        <!-- タブ切り替え -->
+        <div class="flex justify-center mb-2" id="tabs-container">
+            <div class="bg-slate-200/70 p-1 rounded-xl flex space-x-1 w-full max-w-md shadow-inner border border-slate-300/50">
+                <button id="tab-merge" onclick="switchMode('merge')" class="flex-1 py-2.5 px-4 rounded-lg text-sm font-bold bg-white text-indigo-700 shadow-sm transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-object-group text-lg"></i> PDFを結合
+                </button>
+                <button id="tab-delete" onclick="switchMode('delete')" class="flex-1 py-2.5 px-4 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-file-circle-minus text-lg"></i> ページを削除
+                </button>
             </div>
-        </section>
+        </div>
 
-        <!-- PDF一覧セクション -->
-        <section id="pdf-list-section" class="hidden flex-1 flex flex-col space-y-4">
-            
-            <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div class="flex items-center space-x-3 w-full sm:w-auto justify-between sm:justify-start">
-                    <span class="font-semibold text-slate-700 text-sm flex items-center gap-2">
-                        <i class="fa-solid fa-list-ol text-indigo-600"></i>
-                        追加されたファイル
-                        <span id="file-count-badge" class="bg-indigo-100 text-indigo-700 text-xs px-2.5 py-0.5 rounded-full font-bold">0</span>
-                    </span>
-                    <span id="total-pages-badge" class="text-xs text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">
-                        計 0 ページ
-                    </span>
-                </div>
+        <!-- ワークスペース (表示切り替えエリア) -->
+        <div id="workspace">
 
-                <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
-                    <button id="add-more-btn" class="px-3.5 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors flex items-center gap-1.5">
-                        <i class="fa-solid fa-plus"></i> 追加
-                    </button>
-                    <button id="clear-all-btn" class="px-3.5 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 rounded-lg transition-colors flex items-center gap-1.5">
-                        <i class="fa-solid fa-trash-can"></i> 一括クリア
-                    </button>
-                </div>
-            </div>
-
-            <div id="pdf-items-container" class="space-y-3 min-h-[120px]"></div>
-
-            <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-md space-y-4 mt-4">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
-                    <div>
-                        <label for="output-filename" class="block text-xs font-semibold text-slate-600 mb-1">ファイル名は何にするのー？</label>
-                        <div class="relative">
-                            <input type="text" id="output-filename" value="merged_document" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white pr-12 transition-all">
-                            <span class="absolute right-3 top-2.5 text-sm text-slate-400 font-medium">.pdf</span>
+            <!-- ===================== -->
+            <!-- モード1: PDF結合エリア -->
+            <!-- ===================== -->
+            <div id="mode-merge" class="space-y-6">
+                <!-- ドロップゾーン -->
+                <div id="drop-zone-merge" class="border-2 border-dashed border-slate-300 hover:border-indigo-400 bg-white hover:bg-slate-50/50 rounded-2xl p-8 text-center transition-all duration-200 cursor-pointer shadow-sm group">
+                    <input type="file" id="file-input-merge" accept="application/pdf" multiple class="hidden">
+                    <div class="max-w-md mx-auto flex flex-col items-center space-y-3 pointer-events-none">
+                        <div class="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                            <i class="fa-solid fa-cloud-arrow-up text-2xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-base font-semibold text-slate-700">結合したいPDFをここにドロップしてね (複数可)</p>
+                            <p class="text-xs text-slate-500 mt-1">それか画面をクリックしてファイルを選択</p>
                         </div>
                     </div>
-                    <div class="flex items-end justify-end h-full pt-2 md:pt-0">
-                        <button id="merge-btn" class="w-full md:w-auto min-w-[220px] bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold py-3 px-8 rounded-xl shadow-lg shadow-indigo-200 hover:shadow-indigo-300 transition-all duration-200 flex items-center justify-center space-x-2 group">
+                </div>
+
+                <!-- ファイル一覧 -->
+                <div id="merge-list-section" class="hidden flex-col space-y-4">
+                    <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex items-center justify-between">
+                        <span class="font-semibold text-slate-700 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-list-ol text-indigo-600"></i> 追加されたファイル
+                            <span id="merge-count" class="bg-indigo-100 text-indigo-700 text-xs px-2.5 py-0.5 rounded-full font-bold">0</span>
+                        </span>
+                        <div class="flex gap-2">
+                            <button onclick="document.getElementById('file-input-merge').click()" class="px-3.5 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg flex items-center gap-1.5"><i class="fa-solid fa-plus"></i> 追加</button>
+                            <button onclick="clearMergeList()" class="px-3.5 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 rounded-lg flex items-center gap-1.5"><i class="fa-solid fa-trash-can"></i> クリア</button>
+                        </div>
+                    </div>
+
+                    <div id="merge-items-container" class="space-y-3 min-h-[120px]"></div>
+
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-md flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <div class="w-full sm:w-1/2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">ファイル名は何にするのー？</label>
+                            <div class="relative">
+                                <input type="text" id="merge-filename" value="merged_document" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <span class="absolute right-3 top-2.5 text-sm text-slate-400 font-medium">.pdf</span>
+                            </div>
+                        </div>
+                        <button onclick="executeProcess('merge')" class="w-full sm:w-auto min-w-[220px] bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold py-3 px-8 rounded-xl shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2 group">
                             <i class="fa-solid fa-object-group group-hover:scale-110 transition-transform"></i>
                             <span>PDFを結合する</span>
                         </button>
@@ -139,23 +116,76 @@
                 </div>
             </div>
 
-        </section>
+            <!-- ===================== -->
+            <!-- モード2: ページ削除エリア -->
+            <!-- ===================== -->
+            <div id="mode-delete" class="hidden space-y-6">
+                <!-- ドロップゾーン -->
+                <div id="drop-zone-delete" class="border-2 border-dashed border-slate-300 hover:border-indigo-400 bg-white hover:bg-slate-50/50 rounded-2xl p-8 text-center transition-all duration-200 cursor-pointer shadow-sm group">
+                    <input type="file" id="file-input-delete" accept="application/pdf" class="hidden">
+                    <div class="max-w-md mx-auto flex flex-col items-center space-y-3 pointer-events-none">
+                        <div class="w-16 h-16 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                            <i class="fa-solid fa-file-circle-minus text-2xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-base font-semibold text-slate-700">ページを削りたいPDFを1つだけドロップしてね</p>
+                            <p class="text-xs text-slate-500 mt-1">それか画面をクリックしてファイルを選択</p>
+                        </div>
+                    </div>
+                </div>
 
-        <!-- 結合処理中の表示 -->
+                <!-- 編集・プレビューエリア -->
+                <div id="delete-edit-section" class="hidden flex-col space-y-4">
+                    <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex items-center justify-between">
+                        <div>
+                            <span class="font-semibold text-slate-700 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-file-pdf text-indigo-600"></i>
+                                <span id="delete-filename-display">filename.pdf</span>
+                            </span>
+                            <p class="text-xs text-slate-500 mt-1">消したいページをクリックしてね（<span class="text-rose-500 font-bold">赤枠</span>が削除対象になります）</p>
+                        </div>
+                        <button onclick="clearDeleteFile()" class="w-10 h-10 flex items-center justify-center rounded-full text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors">
+                            <i class="fa-solid fa-xmark text-xl"></i>
+                        </button>
+                    </div>
+
+                    <div class="bg-slate-100/50 border border-slate-200 rounded-xl p-6 min-h-[300px] max-h-[600px] overflow-y-auto">
+                        <div id="delete-pages-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"></div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-md flex flex-col sm:flex-row gap-4 items-center justify-between">
+                        <div class="w-full sm:w-1/2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">保存するファイル名</label>
+                            <div class="relative">
+                                <input type="text" id="delete-filename" value="edited_document" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                <span class="absolute right-3 top-2.5 text-sm text-slate-400 font-medium">.pdf</span>
+                            </div>
+                        </div>
+                        <button onclick="executeProcess('delete')" class="w-full sm:w-auto min-w-[220px] bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold py-3 px-8 rounded-xl shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2 group">
+                            <i class="fa-solid fa-scissors group-hover:scale-110 transition-transform"></i>
+                            <span>不要ページを削除して保存</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 処理中の表示 -->
         <section id="processing-section" class="hidden bg-white rounded-2xl p-10 border border-slate-200 shadow-md text-center space-y-4">
             <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-indigo-50 text-indigo-600 animate-spin">
                 <i class="fa-solid fa-circle-notch text-3xl"></i>
             </div>
             <div>
-                <h3 class="text-lg font-bold text-slate-800">PDFを結合しているよー</h3>
-                <p id="processing-status" class="text-sm text-slate-500 mt-1">ファイルを解析・統合中だよー</p>
+                <h3 class="text-lg font-bold text-slate-800">処理しているよー</h3>
+                <p id="processing-status" class="text-sm text-slate-500 mt-1">ファイルを解析・生成中だよー</p>
             </div>
             <div class="w-full bg-slate-100 rounded-full h-3 max-w-md mx-auto overflow-hidden">
                 <div id="progress-bar" class="bg-gradient-to-r from-indigo-500 to-violet-600 h-3 rounded-full w-0 transition-all duration-300"></div>
             </div>
         </section>
 
-        <!-- 結合完了・ダウンロード表示 -->
+        <!-- 完了・ダウンロード表示 -->
         <section id="result-section" class="hidden space-y-6">
             <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
                 <div class="flex items-center space-x-4">
@@ -163,29 +193,30 @@
                         <i class="fa-solid fa-check text-2xl"></i>
                     </div>
                     <div>
-                        <h3 class="text-base font-bold text-emerald-900">PDF結合できたよ！お疲れさま！！</h3>
+                        <h3 class="text-base font-bold text-emerald-900">PDF完成したよ！お疲れさま！！</h3>
                         <p id="result-info" class="text-xs text-emerald-700 mt-0.5">ファイルサイズ: 0 MB | 合計 0 ページ</p>
                     </div>
                 </div>
                 <div class="flex items-center space-x-3 w-full sm:w-auto">
-                    <button id="reset-btn" class="px-4 py-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-xl transition-colors">
-                        別のファイルを結合する？
+                    <button onclick="resetApp()" class="px-4 py-2.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-xl transition-colors">
+                        最初に戻る
                     </button>
-                    <a id="download-btn" href="#" download="merged.pdf" class="flex-1 sm:flex-none px-6 py-2.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md shadow-emerald-200 transition-colors flex items-center justify-center space-x-2">
+                    <a id="download-btn" href="#" download="document.pdf" class="flex-1 sm:flex-none px-6 py-2.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md shadow-emerald-200 transition-colors flex items-center justify-center gap-2">
                         <i class="fa-solid fa-download"></i>
-                        <span>このボタンからダウンロードできるよ</span>
+                        <span>ダウンロードする</span>
                     </a>
                 </div>
             </div>
 
+            <!-- プレビュー -->
             <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-3">
                 <div class="flex items-center justify-between border-b border-slate-100 pb-3 px-2">
                     <span class="text-sm font-semibold text-slate-700 flex items-center gap-2">
                         <i class="fa-solid fa-eye text-indigo-600"></i>
-                        結合したファイルの中身があってるかここから確認してみて
+                        完成したファイルの中身があってるか確認してね
                     </span>
                 </div>
-                <div class="w-full h-[650px] rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+                <div class="w-full h-[600px] rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
                     <iframe id="pdf-preview-iframe" class="w-full h-full border-0"></iframe>
                 </div>
             </div>
@@ -195,116 +226,105 @@
 
     <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
         <div class="max-w-6xl mx-auto px-4 text-center text-xs text-slate-400">
-            シンプルなデザインにしてみました！なんかレイアウト変えてほしかったら言ってね！できる限り頑張るよー
+            新しくPDF削除ツールを追加しました！良ければ使ってね～
         </div>
     </footer>
 
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
 
     <script>
-        let pdfList = [];
+        // === 状態管理 ===
+        let currentMode = 'merge'; // 'merge' or 'delete'
+        
+        // 結合用データ
+        let mergeList = [];
         let draggedIndex = null;
-        let mergedBlobUrl = null;
+        
+        // 削除用データ
+        let deleteTargetFile = null;
+        let deleteTargetPdfDoc = null;
+        let deletedPagesSet = new Set();
+        
+        // 共通
+        let outputBlobUrl = null;
 
-        const dropZone = document.getElementById('drop-zone');
-        const fileInput = document.getElementById('file-input');
-        const pdfListSection = document.getElementById('pdf-list-section');
-        const pdfItemsContainer = document.getElementById('pdf-items-container');
-        const fileCountBadge = document.getElementById('file-count-badge');
-        const totalPagesBadge = document.getElementById('total-pages-badge');
-        const addMoreBtn = document.getElementById('add-more-btn');
-        const clearAllBtn = document.getElementById('clear-all-btn');
-        const mergeBtn = document.getElementById('merge-btn');
-        const outputFilenameInput = document.getElementById('output-filename');
-        const processingSection = document.getElementById('processing-section');
-        const processingStatus = document.getElementById('processing-status');
-        const progressBar = document.getElementById('progress-bar');
-        const resultSection = document.getElementById('result-section');
-        const resultInfo = document.getElementById('result-info');
-        const downloadBtn = document.getElementById('download-btn');
-        const resetBtn = document.getElementById('reset-btn');
-        const previewIframe = document.getElementById('pdf-preview-iframe');
+        // === タブ切り替え ===
+        function switchMode(mode) {
+            currentMode = mode;
+            const tabMerge = document.getElementById('tab-merge');
+            const tabDelete = document.getElementById('tab-delete');
+            const viewMerge = document.getElementById('mode-merge');
+            const viewDelete = document.getElementById('mode-delete');
 
-        initEventListeners();
+            if (mode === 'merge') {
+                tabMerge.className = "flex-1 py-2.5 px-4 rounded-lg text-sm font-bold bg-white text-indigo-700 shadow-sm transition-all flex items-center justify-center gap-2";
+                tabDelete.className = "flex-1 py-2.5 px-4 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 transition-all flex items-center justify-center gap-2";
+                viewMerge.classList.remove('hidden');
+                viewDelete.classList.add('hidden');
+            } else {
+                tabDelete.className = "flex-1 py-2.5 px-4 rounded-lg text-sm font-bold bg-white text-indigo-700 shadow-sm transition-all flex items-center justify-center gap-2";
+                tabMerge.className = "flex-1 py-2.5 px-4 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 transition-all flex items-center justify-center gap-2";
+                viewDelete.classList.remove('hidden');
+                viewMerge.classList.add('hidden');
+            }
+        }
 
-        function initEventListeners() {
+        // === ドラッグ＆ドロップ初期設定 ===
+        setupDropZone('drop-zone-merge', 'file-input-merge', true);
+        setupDropZone('drop-zone-delete', 'file-input-delete', false);
+
+        function setupDropZone(zoneId, inputId, isMultiple) {
+            const dropZone = document.getElementById(zoneId);
+            const fileInput = document.getElementById(inputId);
+
             dropZone.addEventListener('click', () => fileInput.click());
-            addMoreBtn.addEventListener('click', () => fileInput.click());
-
-            ['dragenter', 'dragover'].forEach(eventName => {
-                dropZone.addEventListener(eventName, (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    dropZone.classList.add('drag-over');
-                }, false);
-            });
-
-            ['dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    dropZone.classList.remove('drag-over');
-                }, false);
-            });
+            
+            ['dragenter', 'dragover'].forEach(evt => dropZone.addEventListener(evt, e => {
+                e.preventDefault(); e.stopPropagation(); dropZone.classList.add('drag-over');
+            }));
+            ['dragleave', 'drop'].forEach(evt => dropZone.addEventListener(evt, e => {
+                e.preventDefault(); e.stopPropagation(); dropZone.classList.remove('drag-over');
+            }));
 
             dropZone.addEventListener('drop', (e) => {
-                const files = Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
-                if (files.length > 0) {
-                    handleFiles(files);
-                } else {
-                    showToast('PDFファイル (.pdf) のみ追加できます。', 'warning');
-                }
+                const files = Array.from(e.dataTransfer.files).filter(f => f.name.toLowerCase().endsWith('.pdf'));
+                if (files.length > 0) handleFiles(isMultiple ? files : [files[0]]);
+                else showToast('PDFファイルのみ対応しています', 'warning');
             });
 
             fileInput.addEventListener('change', (e) => {
                 const files = Array.from(e.target.files);
-                if (files.length > 0) {
-                    handleFiles(files);
-                    fileInput.value = '';
-                }
+                if (files.length > 0) handleFiles(files);
+                fileInput.value = '';
             });
-
-            clearAllBtn.addEventListener('click', () => {
-                pdfList = [];
-                renderFileList();
-                showToast('すべてのファイルを削除しました。', 'info');
-            });
-
-            mergeBtn.addEventListener('click', processMerge);
-            resetBtn.addEventListener('click', resetApp);
         }
 
         async function handleFiles(files) {
-            showToast(`${files.length}件のファイルを読み込んでいます...`, 'info');
-
-            for (const file of files) {
-                try {
-                    const arrayBuffer = await file.arrayBuffer();
-                    const typedarray = new Uint8Array(arrayBuffer);
-
-                    const loadingTask = pdfjsLib.getDocument({ data: typedarray });
-                    const pdfDoc = await loadingTask.promise;
-                    const pageCount = pdfDoc.numPages;
-
-                    const thumbnail = await generateThumbnail(pdfDoc);
-
-                    const pdfItem = {
-                        id: 'pdf_' + Math.random().toString(36).substr(2, 9),
-                        file: file,
-                        name: file.name,
-                        size: formatFileSize(file.size),
-                        pageCount: pageCount,
-                        thumbnail: thumbnail
-                    };
-
-                    pdfList.push(pdfItem);
-                } catch (err) {
-                    console.error('PDF解析エラー:', err);
-                    showToast(`"${file.name}" の読み込みに失敗しました。`, 'error');
+            showToast('ファイルを読み込んでいます...', 'info');
+            if (currentMode === 'merge') {
+                for (const file of files) {
+                    try {
+                        const buffer = await file.arrayBuffer();
+                        const pdfDoc = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
+                        const thumb = await generateThumbnail(pdfDoc);
+                        mergeList.push({
+                            id: Math.random().toString(36).substr(2),
+                            file: file,
+                            name: file.name,
+                            size: formatFileSize(file.size),
+                            pages: pdfDoc.numPages,
+                            thumbnail: thumb
+                        });
+                    } catch(e) {
+                        showToast(`"${file.name}" の解析に失敗しました`, 'error');
+                    }
                 }
+                renderMergeList();
+            } else {
+                deleteTargetFile = files[0];
+                deletedPagesSet.clear();
+                await loadDeletePreview(deleteTargetFile);
             }
-
-            renderFileList();
         }
 
         async function generateThumbnail(pdfDoc) {
@@ -312,313 +332,244 @@
                 const page = await pdfDoc.getPage(1);
                 const viewport = page.getViewport({ scale: 0.3 });
                 const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                canvas.height = viewport.height;
-                canvas.width = viewport.width;
-
-                await page.render({
-                    canvasContext: context,
-                    viewport: viewport
-                }).promise;
-
+                canvas.height = viewport.height; canvas.width = viewport.width;
+                await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
                 return canvas.toDataURL('image/jpeg', 0.8);
-            } catch (e) {
-                return null;
-            }
+            } catch (e) { return null; }
         }
 
-        function renderFileList() {
-            if (pdfList.length === 0) {
-                pdfListSection.classList.add('hidden');
+        // ============================
+        // モード1: 結合UI処理
+        // ============================
+        function renderMergeList() {
+            const section = document.getElementById('merge-list-section');
+            const container = document.getElementById('merge-items-container');
+            
+            if (mergeList.length === 0) {
+                section.classList.add('hidden');
                 return;
             }
 
-            pdfListSection.classList.remove('hidden');
-            pdfItemsContainer.innerHTML = '';
+            section.classList.remove('hidden');
+            section.classList.add('flex');
+            document.getElementById('merge-count').textContent = mergeList.length;
+            container.innerHTML = '';
 
-            let totalPages = 0;
-
-            pdfList.forEach((item, index) => {
-                totalPages += item.pageCount;
-
+            mergeList.forEach((item, index) => {
                 const card = document.createElement('div');
-                card.className = 'bg-white rounded-xl p-3.5 border border-slate-200 shadow-sm flex items-center justify-between gap-4 transition-all duration-150 hover:border-indigo-300';
+                card.className = 'bg-white rounded-xl p-3 border border-slate-200 shadow-sm flex items-center justify-between gap-4 transition-all duration-150 hover:border-indigo-300';
                 card.draggable = true;
                 card.dataset.index = index;
 
-                card.addEventListener('dragstart', handleDragStart);
-                card.addEventListener('dragover', handleDragOver);
-                card.addEventListener('drop', handleDrop);
-                card.addEventListener('dragend', handleDragEnd);
+                card.addEventListener('dragstart', function() { draggedIndex = index; this.classList.add('ghost-card'); });
+                card.addEventListener('dragover', e => e.preventDefault());
+                card.addEventListener('drop', function(e) {
+                    e.preventDefault();
+                    const targetIndex = parseInt(this.dataset.index);
+                    if (draggedIndex !== null && draggedIndex !== targetIndex) {
+                        const draggedItem = mergeList.splice(draggedIndex, 1)[0];
+                        mergeList.splice(targetIndex, 0, draggedItem);
+                        renderMergeList();
+                    }
+                });
+                card.addEventListener('dragend', function() { this.classList.remove('ghost-card'); draggedIndex = null; });
 
                 card.innerHTML = `
                     <div class="flex items-center space-x-3.5 min-w-0 flex-1">
-                        <div class="cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-600 p-1">
-                            <i class="fa-solid fa-grip-vertical"></i>
-                        </div>
-
+                        <div class="cursor-grab text-slate-300 hover:text-slate-600 p-1"><i class="fa-solid fa-grip-vertical"></i></div>
                         <div class="w-12 h-16 bg-slate-100 rounded-md border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
-                            ${item.thumbnail ? 
-                                `<img src="${item.thumbnail}" class="w-full h-full object-cover" alt="プレビュー">` : 
-                                `<i class="fa-solid fa-file-pdf text-slate-400 text-xl"></i>`}
+                            ${item.thumbnail ? `<img src="${item.thumbnail}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-file-pdf text-slate-400"></i>`}
                         </div>
-
                         <div class="min-w-0 flex-1">
-                            <h4 class="text-sm font-semibold text-slate-800 truncate" title="${escapeHtml(item.name)}">
-                                ${escapeHtml(item.name)}
-                            </h4>
-                            <div class="flex items-center space-x-3 text-xs text-slate-500 mt-1">
-                                <span class="flex items-center gap-1 font-medium text-slate-600">
-                                    <i class="fa-regular fa-file"></i> ${item.pageCount} ページ
-                                </span>
-                                <span>•</span>
-                                <span>${item.size}</span>
-                            </div>
+                            <h4 class="text-sm font-semibold text-slate-800 truncate">${item.name}</h4>
+                            <p class="text-xs text-slate-500 mt-1"><i class="fa-regular fa-file"></i> ${item.pages} ページ • ${item.size}</p>
                         </div>
                     </div>
-
                     <div class="flex items-center space-x-1 shrink-0">
-                        <button onclick="moveItem(${index}, -1)" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors ${index === 0 ? 'opacity-30 cursor-not-allowed' : ''}" ${index === 0 ? 'disabled' : ''} title="上へ移動">
-                            <i class="fa-solid fa-arrow-up text-xs"></i>
-                        </button>
-                        <button onclick="moveItem(${index}, 1)" class="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors ${index === pdfList.length - 1 ? 'opacity-30 cursor-not-allowed' : ''}" ${index === pdfList.length - 1 ? 'disabled' : ''} title="下へ移動">
-                            <i class="fa-solid fa-arrow-down text-xs"></i>
-                        </button>
-                        <div class="w-px h-4 bg-slate-200 mx-1"></div>
-                        <button onclick="removeItem(${index})" class="p-1.5 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="削除">
-                            <i class="fa-solid fa-trash-can text-xs"></i>
-                        </button>
+                        <button onclick="removeMergeItem(${index})" class="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"><i class="fa-solid fa-trash-can text-sm"></i></button>
                     </div>
                 `;
-
-                pdfItemsContainer.appendChild(card);
+                container.appendChild(card);
             });
-
-            fileCountBadge.textContent = pdfList.length;
-            totalPagesBadge.textContent = `計 ${totalPages} ページ`;
         }
+        function clearMergeList() { mergeList = []; renderMergeList(); }
+        window.removeMergeItem = function(index) { mergeList.splice(index, 1); renderMergeList(); };
 
-        window.moveItem = function(index, direction) {
-            const newIndex = index + direction;
-            if (newIndex < 0 || newIndex >= pdfList.length) return;
+        // ============================
+        // モード2: 削除UI処理
+        // ============================
+        async function loadDeletePreview(file) {
+            document.getElementById('drop-zone-delete').classList.add('hidden');
+            document.getElementById('delete-edit-section').classList.remove('hidden');
+            document.getElementById('delete-edit-section').classList.add('flex');
+            document.getElementById('delete-filename-display').textContent = file.name;
+            document.getElementById('delete-filename').value = 'edited_' + file.name.replace('.pdf', '');
             
-            const temp = pdfList[index];
-            pdfList[index] = pdfList[newIndex];
-            pdfList[newIndex] = temp;
-            renderFileList();
-        };
+            const grid = document.getElementById('delete-pages-grid');
+            grid.innerHTML = '<div class="col-span-full flex flex-col items-center py-10 text-slate-400"><i class="fa-solid fa-spinner fa-spin text-3xl mb-3"></i><p>プレビュー生成中...</p></div>';
 
-        window.removeItem = function(index) {
-            pdfList.splice(index, 1);
-            renderFileList();
-            showToast('ファイルをリストから削除しました。', 'info');
-        };
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                deleteTargetPdfDoc = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+                grid.innerHTML = '';
 
-        function handleDragStart(e) {
-            draggedIndex = parseInt(this.dataset.index);
-            this.classList.add('ghost-card');
-            e.dataTransfer.effectAllowed = 'move';
-        }
+                for (let i = 1; i <= deleteTargetPdfDoc.numPages; i++) {
+                    const page = await deleteTargetPdfDoc.getPage(i);
+                    const viewport = page.getViewport({ scale: 0.4 });
+                    
+                    const pageIndex = i - 1;
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'relative cursor-pointer rounded-xl border-2 border-transparent hover:border-indigo-300 shadow-sm hover:shadow-md overflow-hidden bg-white transition-all duration-200 select-none';
+                    
+                    wrapper.onclick = () => {
+                        if (deletedPagesSet.has(pageIndex)) {
+                            deletedPagesSet.delete(pageIndex);
+                            wrapper.className = 'relative cursor-pointer rounded-xl border-2 border-transparent hover:border-indigo-300 shadow-sm hover:shadow-md overflow-hidden bg-white transition-all duration-200 select-none';
+                            wrapper.querySelector('.delete-overlay').classList.add('hidden');
+                        } else {
+                            deletedPagesSet.add(pageIndex);
+                            wrapper.className = 'relative cursor-pointer rounded-xl border-2 border-rose-400 opacity-60 scale-95 overflow-hidden bg-white transition-all duration-200 select-none';
+                            wrapper.querySelector('.delete-overlay').classList.remove('hidden');
+                        }
+                    };
 
-        function handleDragOver(e) {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'move';
-        }
+                    const canvas = document.createElement('canvas');
+                    canvas.className = 'w-full h-auto block';
+                    canvas.width = viewport.width; canvas.height = viewport.height;
+                    page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport });
 
-        function handleDrop(e) {
-            e.preventDefault();
-            const targetIndex = parseInt(this.dataset.index);
-            if (draggedIndex !== null && draggedIndex !== targetIndex) {
-                const draggedItem = pdfList.splice(draggedIndex, 1)[0];
-                pdfList.splice(targetIndex, 0, draggedItem);
-                renderFileList();
+                    const overlay = document.createElement('div');
+                    overlay.className = 'delete-overlay absolute inset-0 bg-rose-500/20 flex flex-col items-center justify-center transition-opacity hidden';
+                    overlay.innerHTML = '<div class="bg-rose-500 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg"><i class="fa-solid fa-trash-can text-lg"></i></div>';
+
+                    const badge = document.createElement('div');
+                    badge.className = 'absolute bottom-2 right-2 bg-slate-800/80 text-white text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-sm';
+                    badge.textContent = `P.${i}`;
+
+                    wrapper.appendChild(canvas);
+                    wrapper.appendChild(overlay);
+                    wrapper.appendChild(badge);
+                    grid.appendChild(wrapper);
+                }
+            } catch(e) {
+                grid.innerHTML = '<div class="col-span-full text-center text-rose-500 py-10"><i class="fa-solid fa-circle-exclamation mr-2"></i>プレビューの読み込みに失敗しました</div>';
             }
         }
 
-        function handleDragEnd(e) {
-            this.classList.remove('ghost-card');
-            draggedIndex = null;
+        function clearDeleteFile() {
+            deleteTargetFile = null;
+            document.getElementById('drop-zone-delete').classList.remove('hidden');
+            document.getElementById('delete-edit-section').classList.add('hidden');
+            document.getElementById('delete-edit-section').classList.remove('flex');
         }
 
-        // PDF結合メイン処理（ハイブリッド方式）
-        async function processMerge() {
-            if (pdfList.length === 0) return;
+        // ============================
+        // 共通: PDF生成処理
+        // ============================
+        async function executeProcess(mode) {
+            if (mode === 'merge' && mergeList.length === 0) return;
+            if (mode === 'delete' && !deleteTargetFile) return;
 
-            pdfListSection.classList.add('hidden');
+            document.getElementById('tabs-container').classList.add('hidden');
+            document.getElementById('workspace').classList.add('hidden');
+            
+            const processingSection = document.getElementById('processing-section');
+            const processingStatus = document.getElementById('processing-status');
+            const progressBar = document.getElementById('progress-bar');
+            
             processingSection.classList.remove('hidden');
             progressBar.style.width = '10%';
-            processingStatus.textContent = '新規PDFドキュメントを構築中...';
+            processingStatus.textContent = mode === 'merge' ? 'PDFを順番にくっつけてるよー' : '指定されたページを削除してるよー';
 
             try {
-                const PDFDocument = window.PDFLib ? window.PDFLib.PDFDocument : null;
-                if (!PDFDocument) {
-                    throw new Error('PDF-Lib ライブラリの読み込みに失敗しました。');
+                const PDFDocument = window.PDFLib.PDFDocument;
+                const outPdf = await PDFDocument.create();
+                let totalFinalPages = 0;
+
+                if (mode === 'merge') {
+                    for (let i = 0; i < mergeList.length; i++) {
+                        processingStatus.textContent = `統合中 (${i + 1}/${mergeList.length}): ${mergeList[i].name}`;
+                        const fileBuffer = await mergeList[i].file.arrayBuffer();
+                        const srcPdf = await PDFDocument.load(fileBuffer, { ignoreEncryption: true });
+                        const copiedPages = await outPdf.copyPages(srcPdf, srcPdf.getPageIndices());
+                        copiedPages.forEach(p => outPdf.addPage(p));
+                        totalFinalPages += copiedPages.length;
+                        progressBar.style.width = `${10 + (80 * (i + 1) / mergeList.length)}%`;
+                    }
+                } else {
+                    const fileBuffer = await deleteTargetFile.arrayBuffer();
+                    const srcPdf = await PDFDocument.load(fileBuffer, { ignoreEncryption: true });
+                    const allIndices = srcPdf.getPageIndices();
+                    const keepIndices = allIndices.filter(idx => !deletedPagesSet.has(idx));
+                    
+                    if (keepIndices.length === 0) throw new Error('全部消しちゃダメだよ！最低1ページは残してね。');
+                    
+                    const copiedPages = await outPdf.copyPages(srcPdf, keepIndices);
+                    copiedPages.forEach(p => outPdf.addPage(p));
+                    totalFinalPages = copiedPages.length;
+                    progressBar.style.width = '90%';
                 }
 
-                const mergedPdfDoc = await PDFDocument.create();
-                const totalItems = pdfList.length;
-
-                for (let i = 0; i < totalItems; i++) {
-                    const item = pdfList[i];
-                    processingStatus.textContent = `統合中 (${i + 1}/${totalItems}): ${item.name}`;
-
-                    const fileArrayBuffer = await item.file.arrayBuffer();
-                    let success = false;
-
-                    // 1. まず pdf-lib での標準複製（ベクター保持・高速）を試行
-                    try {
-                        const bytes = new Uint8Array(fileArrayBuffer.slice(0));
-                        const srcPdfDoc = await PDFDocument.load(bytes, { ignoreEncryption: true });
-                        const pageIndices = srcPdfDoc.getPageIndices();
-                        const copiedPages = await mergedPdfDoc.copyPages(srcPdfDoc, pageIndices);
-                        copiedPages.forEach(page => mergedPdfDoc.addPage(page));
-                        success = true;
-                    } catch (directErr) {
-                        console.warn(`[${item.name}] pdf-lib標準複製失敗。PDF.jsでの高画質レンダリングへ自動切替:`, directErr);
-                    }
-
-                    // 2. 暗号化や制限で複製が拒否された場合、PDF.js で高精細画像化して結合に組み込む
-                    if (!success) {
-                        try {
-                            await appendPdfViaPdfJs(mergedPdfDoc, fileArrayBuffer);
-                        } catch (fallbackErr) {
-                            throw new Error(`"${item.name}" の処理に失敗しました。`);
-                        }
-                    }
-
-                    const progress = Math.round(((i + 1) / totalItems) * 80) + 10;
-                    progressBar.style.width = `${progress}%`;
-                }
-
-                processingStatus.textContent = '結合ファイルを書き出しています...';
-                progressBar.style.width = '95%';
-
-                const pdfBytes = await mergedPdfDoc.save();
+                processingStatus.textContent = '最終仕上げ中...';
+                const pdfBytes = await outPdf.save();
                 const blob = new Blob([pdfBytes], { type: 'application/pdf' });
                 
-                if (mergedBlobUrl) URL.revokeObjectURL(mergedBlobUrl);
-                mergedBlobUrl = URL.createObjectURL(blob);
+                if (outputBlobUrl) URL.revokeObjectURL(outputBlobUrl);
+                outputBlobUrl = URL.createObjectURL(blob);
 
-                const fileNameInput = outputFilenameInput.value.trim() || 'merged_document';
-                const finalFileName = fileNameInput.endsWith('.pdf') ? fileNameInput : `${fileNameInput}.pdf`;
+                // 出力ファイル名設定
+                let outName = (mode === 'merge' ? document.getElementById('merge-filename').value : document.getElementById('delete-filename').value).trim();
+                if (!outName) outName = 'document';
+                if (!outName.endsWith('.pdf')) outName += '.pdf';
 
-                downloadBtn.href = mergedBlobUrl;
-                downloadBtn.download = finalFileName;
-                previewIframe.src = mergedBlobUrl;
-
-                const totalMergedPages = pdfList.reduce((acc, cur) => acc + cur.pageCount, 0);
-                resultInfo.textContent = `ファイルサイズ: ${formatFileSize(blob.size)} | 合計 ${totalMergedPages} ページ`;
+                const downloadBtn = document.getElementById('download-btn');
+                downloadBtn.href = outputBlobUrl;
+                downloadBtn.download = outName;
+                document.getElementById('pdf-preview-iframe').src = outputBlobUrl;
+                document.getElementById('result-info').textContent = `ファイルサイズ: ${formatFileSize(blob.size)} | 合計 ${totalFinalPages} ページ`;
 
                 progressBar.style.width = '100%';
                 setTimeout(() => {
                     processingSection.classList.add('hidden');
-                    resultSection.classList.remove('hidden');
-                    showToast('PDFの結合が正常に完了しました！', 'success');
-                }, 400);
+                    document.getElementById('result-section').classList.remove('hidden');
+                    showToast('無事に完了したよー！', 'success');
+                }, 500);
 
             } catch (err) {
-                console.error('PDF結合エラー:', err);
-                processingSection.classList.add('hidden');
-                pdfListSection.classList.remove('hidden');
-                progressBar.style.width = '0%';
-                showToast(`PDF結合エラー: ${err.message || '処理を完了できませんでした。'}`, 'error');
-            }
-        }
-
-        // 暗号化/保護付きPDFをPDF.js経由で高解像度（Scale: 2.0）レンダリングして結合ドキュメントへ挿入
-        async function appendPdfViaPdfJs(targetPdfDoc, arrayBuffer) {
-            const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer.slice(0)) });
-            const pdfDoc = await loadingTask.promise;
-            const numPages = pdfDoc.numPages;
-
-            for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-                const page = await pdfDoc.getPage(pageNum);
-                
-                // 鮮明度維持のための高解像度スケール
-                const viewport = page.getViewport({ scale: 2.0 });
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                canvas.width = viewport.width;
-                canvas.height = viewport.height;
-
-                await page.render({
-                    canvasContext: context,
-                    viewport: viewport
-                }).promise;
-
-                const imgDataUrl = canvas.toDataURL('image/jpeg', 0.92);
-                const imgBytes = await fetch(imgDataUrl).then(res => res.arrayBuffer());
-                const embeddedImg = await targetPdfDoc.embedJpg(imgBytes);
-
-                // 元のサイズを保って新しいページに配置
-                const origViewport = page.getViewport({ scale: 1.0 });
-                const newPage = targetPdfDoc.addPage([origViewport.width, origViewport.height]);
-                newPage.drawImage(embeddedImg, {
-                    x: 0,
-                    y: 0,
-                    width: origViewport.width,
-                    height: origViewport.height
-                });
+                console.error(err);
+                resetApp();
+                showToast(`エラー: ${err.message}`, 'error');
             }
         }
 
         function resetApp() {
-            resultSection.classList.add('hidden');
-            pdfListSection.classList.remove('hidden');
-            if (mergedBlobUrl) {
-                URL.revokeObjectURL(mergedBlobUrl);
-                mergedBlobUrl = null;
-            }
-            previewIframe.src = '';
+            document.getElementById('result-section').classList.add('hidden');
+            document.getElementById('processing-section').classList.add('hidden');
+            document.getElementById('tabs-container').classList.remove('hidden');
+            document.getElementById('workspace').classList.remove('hidden');
+            
+            document.getElementById('pdf-preview-iframe').src = '';
+            if (currentMode === 'merge') clearMergeList();
+            else clearDeleteFile();
         }
 
         function formatFileSize(bytes) {
             if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            const k = 1024, sizes = ['Bytes', 'KB', 'MB', 'GB'], i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-        }
-
-        function escapeHtml(str) {
-            return str.replace(/[&<>"']/g, function(m) {
-                return {
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    '"': '&quot;',
-                    "'": '&#039;'
-                }[m];
-            });
         }
 
         function showToast(message, type = 'info') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
-
-            const bgColors = {
-                info: 'bg-slate-800 text-white',
-                success: 'bg-emerald-600 text-white',
-                warning: 'bg-amber-500 text-white',
-                error: 'bg-rose-600 text-white'
-            };
-
-            const icons = {
-                info: 'fa-info-circle',
-                success: 'fa-check-circle',
-                warning: 'fa-exclamation-triangle',
-                error: 'fa-circle-xmark'
-            };
-
-            toast.className = `pointer-events-auto flex items-center space-x-2 px-4 py-3 rounded-xl shadow-lg text-xs font-medium transition-all duration-300 transform translate-y-2 opacity-0 ${bgColors[type] || bgColors.info}`;
-            toast.innerHTML = `<i class="fa-solid ${icons[type]} text-sm"></i><span>${escapeHtml(message)}</span>`;
-
+            const bg = type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : type === 'warning' ? 'bg-amber-500' : 'bg-slate-800';
+            const icon = type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-circle-xmark' : type === 'warning' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+            
+            toast.className = `flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg text-white text-xs font-medium transition-all duration-300 transform translate-y-2 opacity-0 ${bg}`;
+            toast.innerHTML = `<i class="fa-solid ${icon}"></i><span>${message}</span>`;
+            
             container.appendChild(toast);
-
-            requestAnimationFrame(() => {
-                toast.classList.remove('translate-y-2', 'opacity-0');
-            });
-
+            requestAnimationFrame(() => toast.classList.remove('translate-y-2', 'opacity-0'));
             setTimeout(() => {
                 toast.classList.add('opacity-0', 'translate-y-2');
                 setTimeout(() => toast.remove(), 300);
